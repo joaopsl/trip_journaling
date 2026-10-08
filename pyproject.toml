@@ -1,0 +1,28 @@
+[project]
+name = "trip-journal"
+version = "0.1.0"
+description = "Rebuild trip journals from photo metadata, with a map and an AI memory companion."
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=1.12",
+    "fastapi>=0.110",
+    "uvicorn>=0.29",
+    "pillow>=10.0",
+    "pillow-heif>=0.16",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8", "httpx>=0.27"]
+
+[project.scripts]
+trip-journal = "trip_journal.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["trip_journal"]
+
+[tool.setuptools.package-data]
+trip_journal = ["static/*", "static/leaflet/*", "static/leaflet/images/*"]

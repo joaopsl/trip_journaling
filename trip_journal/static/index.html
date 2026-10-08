@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Trip Journal</title>
+  <link rel="stylesheet" href="/static/leaflet/leaflet.css">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <header>
+    <h1>Trip Journal</h1>
+    <select id="trip-select" aria-label="Trip"></select>
+    <span id="trip-stats" class="muted"></span>
+  </header>
+
+  <main>
+    <nav id="days" aria-label="Days"></nav>
+
+    <section id="map-wrap">
+      <div id="map"></div>
+    </section>
+
+    <section id="day-panel" hidden>
+      <div class="day-head">
+        <div>
+          <div id="day-label" class="muted"></div>
+          <input id="day-title" placeholder="Give this day a title…">
+        </div>
+        <span id="save-state" class="muted"></span>
+      </div>
+
+      <div id="photo-strip"></div>
+
+      <label for="journal" class="section-label">Journal</label>
+      <textarea id="journal" placeholder="What happened this day? Start with anything you remember — or ask the companion below."></textarea>
+
+      <div class="chat-head">
+        <span class="section-label">Remember with Claude</span>
+        <span>
+          <button id="draft-btn" type="button" title="Have Claude draft an entry from your conversation">Draft entry</button>
+          <button id="clear-chat" type="button" class="ghost">Clear</button>
+        </span>
+      </div>
+      <div id="chat"></div>
+      <div id="draft-box" hidden>
+        <div id="draft-text"></div>
+        <div class="draft-actions">
+          <button id="draft-append" type="button">Add to journal</button>
+          <button id="draft-discard" type="button" class="ghost">Discard</button>
+        </div>
+      </div>
+      <form id="chat-form">
+        <textarea id="chat-input" rows="2" placeholder="Tell it what you remember, or press Send to let it start asking."></textarea>
+        <button type="submit">Send</button>
+      </form>
+    </section>
+
+    <section id="empty" hidden>
+      <h2>No trips yet</h2>
+      <p>Import a folder of photos from the terminal:</p>
+      <pre>trip-journal import "Japan 2019" ~/Pictures/Japan</pre>
+      <p>then reload this page.</p>
+    </section>
+  </main>
+
+  <div id="lightbox" hidden><img alt=""><div class="caption"></div></div>
+
+  <script src="/static/leaflet/leaflet.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

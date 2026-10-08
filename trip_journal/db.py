@@ -1,0 +1,87 @@
+"""SQLite storage. One file, no server: everything lives under the data directory."""
+
+from __future__ import annotations
+
+import os
+import sqlite3
+from datetime import datetime, timezone
+from pathlib import Path
+
+SCHEMA = """
+CREATE TABLE IF NOT EXISTS trips (
+    id          INTEGER PRIMARY KEY,
+    name        TEXT NOT NULL UNIQUE,
+    created_at  TEXT NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS photos (
+    id                  INTEGER PRIMARY KEY,
+    trip_id             INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    path                TEXT NOT NULL,
+    thumb               TEXT NOT NULL,
+    taken_at            TEXT,           -- local wall-clock time, ISO 8601
+    day                 TEXT,           -- YYYY-MM-DD derived from taken_at
+    utc_offset          TEXT,
+    lat                 REAL,
+    lon                 REAL,
+    altitude            REAL,
+    location_estimated  INTEGER NOT NULL DEFAULT 0,  -- 1 = borrowed from a nearby photo
+    place               TEXT,
+    camera              TEXT,
+    width               INTEGER,
+    height              INTEGER,
+    UNIQUE (trip_id, path)
+);
+CREATE INDEX IF NOT EXISTS photos_by_day ON photos (trip_id, day, taken_at);
+
+CREATE TABLE IF NOT EXISTS days (
+    trip_id     INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    day         TEXT NOT NULL,
+    title       TEXT NOT NULL DEFAULT '',
+    journal     TEXT NOT NULL DEFAULT '',
+    updated_at  TEXT,
+    PRIMARY KEY (trip_id, day)
+);
+
+CREATE TABLE IF NOT EXISTS chat_messages (
+    id          INTEGER PRIMARY KEY,
+    trip_id     INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    day         TEXT NOT NULL,
+    role        TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+    content     TEXT NOT NULL,
+    created_at  TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS chat_by_day ON chat_messages (trip_id, day, id);
+
+CREATE TABLE IF NOT EXISTS place_cache (
+    key   TEXT PRIMARY KEY,
+    name  TEXT
+);
+"""
+
+
+def data_dir() -> Path:
+    return Path(os.environ.get("TRIP_JOURNAL_DATA", "data")).resolve()
+
+
+def now() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="seconds")
+
+
+def connect(path: Path | None = None) -> sqlite3.Connection:
+    path = path or data_dir() / "journal.db"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    conn = sqlite3.connect(path, check_same_thread=False)
+    conn.row_factory = sqlite3.Row
+    conn.execute("PRAGMA foreign_keys = ON")
+    conn.executescript(SCHEMA)
+    return conn
+
+
+def get_or_create_trip(conn: sqlite3.Connection, name: str) -> int:
+    row = conn.execute("SELECT id FROM trips WHERE name = ?", (name,)).fetchone()
+    if row:
+        return row["id"]
+    cur = conn.execute("INSERT INTO trips (name, created_at) VALUES (?, ?)", (name, now()))
+    conn.commit()
+    return cur.lastrowid
