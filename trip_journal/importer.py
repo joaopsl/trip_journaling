@@ -10,6 +10,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 
+from .activities import assign_activities
 from .db import data_dir, get_or_create_trip
 from .exif import IMAGE_SUFFIXES, PhotoMeta, make_thumbnail, read_metadata
 from .geocode import Geocoder
@@ -125,6 +126,7 @@ def import_folder(
 
     report.estimated_location = borrow_missing_locations(conn, trip_id)
     _ensure_days(conn, trip_id)
+    assign_activities(conn, trip_id)
     if geocode:
         name_places(conn, trip_id, progress)
 

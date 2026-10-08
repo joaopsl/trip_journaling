@@ -47,3 +47,19 @@ def test_takeout_sidecar_fills_missing_metadata(data, tmp_path):
     row = conn.execute("SELECT * FROM photos").fetchone()
     assert row["lat"] == pytest.approx(35.0116)
     assert row["taken_at"] == "2019-04-02T09:00:00"  # longitude 135° ≈ UTC+9
+
+
+def test_cli_import_list_and_serve(data, kyoto_folder, capsys, monkeypatch):
+    from trip_journal import cli
+
+    cli.main(["import", "Japan 2019", str(kyoto_folder), "--no-geocode"])
+    cli.main(["list"])
+    out = capsys.readouterr().out
+    assert "Imported 5 photos" in out and "Japan 2019: 5 photos" in out
+
+    import uvicorn
+
+    started = {}
+    monkeypatch.setattr(uvicorn, "run", lambda app, **kw: started.update(app=app, **kw))
+    cli.main(["serve", "--host", "0.0.0.0", "--port", "9000"])
+    assert started["port"] == 9000 and started["app"].title == "Trip Journal"

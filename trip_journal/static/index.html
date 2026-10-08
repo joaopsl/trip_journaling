@@ -7,64 +7,109 @@
   <link rel="stylesheet" href="/static/leaflet/leaflet.css">
   <link rel="stylesheet" href="/static/style.css">
 </head>
-<body>
+<body data-view="write">
   <header>
     <h1>Trip Journal</h1>
     <select id="trip-select" aria-label="Trip"></select>
+    <div class="tabs" role="tablist">
+      <button role="tab" data-view="write" aria-selected="true">Write</button>
+      <button role="tab" data-view="read" aria-selected="false">Read</button>
+    </div>
     <span id="trip-stats" class="muted"></span>
+    <button id="add-photos" type="button" class="ghost">+ Add photos</button>
   </header>
 
-  <main>
+  <!-- ===================== WRITE ===================== -->
+  <main id="write">
     <nav id="days" aria-label="Days"></nav>
 
-    <section id="map-wrap">
+    <section id="editor">
+      <div id="day-empty" class="muted pad">Pick a day on the left.</div>
+      <div id="day-content" hidden>
+        <div class="day-head">
+          <div>
+            <div id="day-label" class="muted"></div>
+            <input id="day-title" placeholder="Give this day a title…">
+          </div>
+          <span id="save-state" class="muted"></span>
+        </div>
+
+        <label for="journal" class="section-label">The day</label>
+        <textarea id="journal" placeholder="How was the day overall? Write anything you remember, or ask Claude on the right to help you remember."></textarea>
+
+        <div class="section-row">
+          <span class="section-label">Activities</span>
+          <button id="suggest-titles" type="button" class="ghost small" title="Claude names untitled activities from their photos">✨ Suggest names</button>
+        </div>
+        <p class="hint muted">Photos are grouped by time and place. Hover a photo to ★ star it (starred photos are shown to Claude first and featured in the Read view) or to start a new activity from it.</p>
+        <div id="activities"></div>
+      </div>
+    </section>
+
+    <aside id="side">
       <div id="map"></div>
-    </section>
-
-    <section id="day-panel" hidden>
-      <div class="day-head">
-        <div>
-          <div id="day-label" class="muted"></div>
-          <input id="day-title" placeholder="Give this day a title…">
+      <div id="chat-panel">
+        <div class="section-row">
+          <span class="section-label">Remember with Claude</span>
+          <span>
+            <button id="draft-btn" type="button" class="small" title="Have Claude draft the day's entry from your conversation and notes">Draft entry</button>
+            <button id="clear-chat" type="button" class="ghost small">Clear</button>
+          </span>
         </div>
-        <span id="save-state" class="muted"></span>
-      </div>
-
-      <div id="photo-strip"></div>
-
-      <label for="journal" class="section-label">Journal</label>
-      <textarea id="journal" placeholder="What happened this day? Start with anything you remember — or ask the companion below."></textarea>
-
-      <div class="chat-head">
-        <span class="section-label">Remember with Claude</span>
-        <span>
-          <button id="draft-btn" type="button" title="Have Claude draft an entry from your conversation">Draft entry</button>
-          <button id="clear-chat" type="button" class="ghost">Clear</button>
-        </span>
-      </div>
-      <div id="chat"></div>
-      <div id="draft-box" hidden>
-        <div id="draft-text"></div>
-        <div class="draft-actions">
-          <button id="draft-append" type="button">Add to journal</button>
-          <button id="draft-discard" type="button" class="ghost">Discard</button>
+        <div id="chat"></div>
+        <div id="draft-box" hidden>
+          <div id="draft-text"></div>
+          <div class="draft-actions">
+            <button id="draft-append" type="button" class="small">Add to the day</button>
+            <button id="draft-discard" type="button" class="ghost small">Discard</button>
+          </div>
         </div>
+        <form id="chat-form">
+          <div id="focus-chip" hidden><span></span><button type="button" aria-label="Stop focusing">×</button></div>
+          <div class="chat-row">
+            <textarea id="chat-input" rows="2" placeholder="Tell it what you remember, or press Send to let it start asking."></textarea>
+            <button type="submit">Send</button>
+          </div>
+        </form>
       </div>
-      <form id="chat-form">
-        <textarea id="chat-input" rows="2" placeholder="Tell it what you remember, or press Send to let it start asking."></textarea>
-        <button type="submit">Send</button>
-      </form>
-    </section>
-
-    <section id="empty" hidden>
-      <h2>No trips yet</h2>
-      <p>Import a folder of photos from the terminal:</p>
-      <pre>trip-journal import "Japan 2019" ~/Pictures/Japan</pre>
-      <p>then reload this page.</p>
-    </section>
+    </aside>
   </main>
 
-  <div id="lightbox" hidden><img alt=""><div class="caption"></div></div>
+  <!-- ===================== READ ===================== -->
+  <main id="read" hidden>
+    <article id="story"></article>
+  </main>
+
+  <section id="empty" hidden>
+    <h2>No trips yet</h2>
+    <p>Click <b>+ Add photos</b> to import a folder of trip photos.</p>
+  </section>
+
+  <!-- ===================== dialogs ===================== -->
+  <dialog id="import-dialog">
+    <form method="dialog" id="import-form">
+      <h2>Add photos</h2>
+      <label>Trip
+        <input id="import-trip" list="trip-names" required placeholder="e.g. Japan 2019 (an existing trip adds to it)">
+        <datalist id="trip-names"></datalist>
+      </label>
+      <div class="section-label">Folder</div>
+      <div id="folder-crumbs"></div>
+      <ul id="folder-list"></ul>
+      <label class="check"><input type="checkbox" id="import-geocode" checked> Look up place names (OpenStreetMap)</label>
+      <pre id="import-log" hidden></pre>
+      <div class="dialog-actions">
+        <button type="button" id="import-close" class="ghost">Close</button>
+        <button type="button" id="import-start">Import this folder</button>
+      </div>
+    </form>
+  </dialog>
+
+  <div id="lightbox" hidden>
+    <button class="nav prev" aria-label="Previous">‹</button>
+    <figure><img alt=""><figcaption></figcaption></figure>
+    <button class="nav next" aria-label="Next">›</button>
+  </div>
 
   <script src="/static/leaflet/leaflet.js"></script>
   <script src="/static/app.js"></script>

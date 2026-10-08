@@ -53,6 +53,16 @@ CREATE TABLE IF NOT EXISTS chat_messages (
 );
 CREATE INDEX IF NOT EXISTS chat_by_day ON chat_messages (trip_id, day, id);
 
+CREATE TABLE IF NOT EXISTS activities (
+    id          INTEGER PRIMARY KEY,
+    trip_id     INTEGER NOT NULL REFERENCES trips(id) ON DELETE CASCADE,
+    day         TEXT NOT NULL,
+    title       TEXT NOT NULL DEFAULT '',
+    notes       TEXT NOT NULL DEFAULT '',
+    updated_at  TEXT
+);
+CREATE INDEX IF NOT EXISTS activities_by_day ON activities (trip_id, day);
+
 CREATE TABLE IF NOT EXISTS place_cache (
     key   TEXT PRIMARY KEY,
     name  TEXT
@@ -68,14 +78,37 @@ def now() -> str:
     return datetime.now(timezone.utc).isoformat(timespec="seconds")
 
 
-def connect(path: Path | None = None) -> sqlite3.Connection:
-    path = path or data_dir() / "journal.db"
+def db_path() -> Path:
+    return data_dir() / "journal.db"
+
+
+def connect(path: Path | None = None, *, init: bool = True) -> sqlite3.Connection:
+    """Open the database. `init` creates/migrates the schema (needed once per process).
+
+    A connection must not be used by two threads at the same time, so the web
+    server opens one per request rather than sharing one.
+    """
+    path = path or db_path()
     path.parent.mkdir(parents=True, exist_ok=True)
-    conn = sqlite3.connect(path, check_same_thread=False)
+    conn = sqlite3.connect(path, check_same_thread=False, timeout=30)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")
-    conn.executescript(SCHEMA)
+    if init:
+        conn.execute("PRAGMA journal_mode = WAL")  # the app can read while an import writes
+        conn.executescript(SCHEMA)
+        _migrate(conn)
     return conn
+
+
+def _migrate(conn: sqlite3.Connection) -> None:
+    """Add columns introduced after the first release to existing databases."""
+    cols = {r["name"] for r in conn.execute("PRAGMA table_info(photos)")}
+    if "activity_id" not in cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN activity_id INTEGER REFERENCES activities(id) ON DELETE SET NULL")
+    if "starred" not in cols:
+        conn.execute("ALTER TABLE photos ADD COLUMN starred INTEGER NOT NULL DEFAULT 0")
+    conn.execute("CREATE INDEX IF NOT EXISTS photos_by_activity ON photos (activity_id)")
+    conn.commit()
 
 
 def get_or_create_trip(conn: sqlite3.Connection, name: str) -> int:

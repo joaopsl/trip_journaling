@@ -1,0 +1,16 @@
+services:
+  trip-journal:
+    build: .
+    image: trip-journal
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8000:8000"   # only reachable from this computer
+    env_file: .env
+    volumes:
+      # Your photo library, read-only: the app never changes your photos.
+      - ${PHOTOS_DIR:?set PHOTOS_DIR in .env}:/photos:ro
+      # Journals, chats and thumbnails live in a named volume that survives rebuilds.
+      - journal-data:/data
+
+volumes:
+  journal-data:

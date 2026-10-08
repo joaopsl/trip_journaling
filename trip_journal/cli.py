@@ -49,8 +49,9 @@ def main(argv: list[str] | None = None) -> None:
 
         from .server import create_app
 
-        print(f"Open http://{args.host}:{args.port}")
-        uvicorn.run(create_app(conn), host=args.host, port=args.port)
+        shown = "localhost" if args.host in ("0.0.0.0", "::") else args.host
+        print(f"Open http://{shown}:{args.port}")
+        uvicorn.run(create_app(), host=args.host, port=args.port)
 
 
 if __name__ == "__main__":
